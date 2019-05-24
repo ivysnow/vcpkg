@@ -259,6 +259,54 @@ namespace vcpkg::Files
                                fs::copy_options opts,
                                std::error_code& ec) override
         {
+            if ((opts & fs::copy_options::create_symlinks) == fs::copy_options::create_symlinks)
+            {
+                do
+                {
+                    if (((opts & fs::copy_options::overwrite_existing) == fs::copy_options::overwrite_existing) && fs::stdfs::exists(newpath) && !fs::stdfs::remove(newpath, ec))
+                        break;
+                    static auto relativePath = [](const fs::path &path, const fs::path &relative_to) -> fs::path {
+                        // create absolute paths
+                        fs::path p = fs::stdfs::absolute(path);
+                        fs::path r = fs::stdfs::absolute(relative_to);
+                    
+                        // if root paths are different, return absolute path
+                        if(p.root_path() != r.root_path())
+                            return p;
+                    
+                        // initialize relative path
+                        fs::path result;
+                    
+                        // find out where the two paths diverge
+                        fs::path::const_iterator itr_path = p.begin();
+                        fs::path::const_iterator itr_relative_to = r.begin();
+                        while(*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end()) {
+                            ++itr_path;
+                            ++itr_relative_to;
+                        }
+                    
+                        // add "../" for each remaining token in relative_to
+                        if(itr_relative_to != r.end()) {
+                            ++itr_relative_to;
+                            while(itr_relative_to != r.end()) {
+                                result /= "..";
+                                ++itr_relative_to;
+                            }
+                        }
+                    
+                        // add remaining path
+                        while(itr_path != p.end()) {
+                            result /= *itr_path;
+                            ++itr_path;
+                        }
+                    
+                        return result;
+                    };
+                    fs::stdfs::create_symlink(relativePath(oldpath, newpath), newpath, ec);
+                    if (!ec) return true;
+
+                } while(false);
+            }
             return fs::stdfs::copy_file(oldpath, newpath, opts, ec);
         }
         virtual void copy_symlink(const fs::path& oldpath, const fs::path& newpath, std::error_code& ec) override

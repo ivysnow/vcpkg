@@ -105,7 +105,7 @@ namespace vcpkg::Install
                                        target.u8string(),
                                        " was already present and will be overwritten\n");
                     }
-                    fs.copy_file(file, target, fs::copy_options::overwrite_existing, ec);
+                    fs.copy_file(file, target, fs::copy_options::overwrite_existing | fs::copy_options::create_symlinks, ec);
                     if (ec)
                     {
                         System::printf(System::Color::error, "failed: %s: %s\n", target.u8string(), ec.message());
